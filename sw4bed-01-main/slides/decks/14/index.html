@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Lesson 14</title>
+
+		<link rel="stylesheet" href="../../dist/reset.css">
+		<link rel="stylesheet" href="../../dist/reveal.css">
+		<link rel="stylesheet" href="../../dist/theme/black.css">
+		<link rel="stylesheet" type="text/css" href="../../css/asciinema-player.css" />
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="../../plugin/highlight/github-dark.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section id="introduction">
+					<section>
+						<h1>Building background tasks and services</h1>
+						<h3>Lesson 14</h3>
+						<h4>SW4BED-01</h4>
+					</section>
+					<section>
+						<h2>Agenda</h2>
+						<ul>
+							<li>Background services</li>
+							<li>Implementing background tasks in .NET</li>
+							<li>Deploying background tasks</li>
+							<li>Quartz.NET</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Building background tasks and services</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>ASP.NET Core apps only create tasks in <mark>response</mark> to a requests</li>
+							<li>No direct interaction with users
+								<ul>
+									<li>Runs in the <mark>background</mark></li>
+									<li>Typically processes item from a <mark>queue</mark> or perform long-running processes</li>
+								</ul>
+							</li>
+							<li>Can be implemented in various ways
+								<ul>
+									<li><code>IHostedService</code></li>
+									<li><code>BackgroundService</code></li>
+								</ul>
+							</li>
+							<li>
+								<ul>
+									<li>You have already made multiple background services
+										<ul>
+											<li>Krestel runs as an <code>IHostedService</code></li>
+											<li>ASP.NET apps is hosted in a Krestel service</li>
+										</ul>
+									</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 690</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Use cases</h2>
+						<ul>
+							<li><mark>Batching</mark> email 
+								<ul>
+									<li>Send out order confirmations from a webshop</li>
+									<li>The user interface is not busy waiting for the mail to go through</li>
+									<li>Send out news letters once each day/week/month</li>
+								</ul>
+							</li>
+							<li><mark>Caching</mark> data from external sources
+								<ul>
+									<li>Improve response time for our APIs</li>
+									<li>Consider what data is cachable. Not all data are good candidates</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Implementing background tasks<br />with<br /><code>BackgroundService</code></h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>Moving work to the <mark>background</mark> enhances UI responsiveness</li>
+							<li>Running background tasks with <mark>timers</mark></li>
+							<li>Using <mark>scoped</mark> services in background tasks</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services">Background tasks with hosted services in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Running on a timer</h2>
+						<ul>
+							<li><mark>Register</mark> background services in <code>ConfigureServices</code>
+								<ul>
+									<li>Just as with any other service</li>
+									<li>Use <code>AddHostedService()</code></li>
+								</ul>
+							</li>
+							<li>Control the <mark>frequency</mark> of task executing with timers
+								<ul>
+									<li>Simple schedule: Run <code>X</code> after time <code>Y</code> has elapsed</li>
+									<li>Use <code>Task.Delay()</code> to specify timespan</li>
+								</ul>
+							</li>
+							<li><code>BackgroundService</code> implements <code>IHostedService</code>
+								<ul>
+									<li>Abstracts away some of the pitfalls</li>
+									<li>Makes it easier to run <code>async</code>/<code>await</code> and enforces <mark>best-pratices</mark> patterns</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services">Background tasks with hosted services in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Timed background task</h2>
+						<pre><code class="cs" data-line-numbers="|5|10-14|16-17,33|18-19,32|31|" data-trim data-noescape><script type="text/template">
+							using ScopedService.Data;
+
+							namespace ScopedService.Worker;
+							
+							public class Worker : BackgroundService
+							{
+								private readonly ILogger<Worker> _logger;
+								private readonly IServiceProvider _provider;
+							
+								public Worker(ILogger<Worker> logger, IServiceProvider provider)
+								{
+									_logger = logger;
+									_provider = provider;
+								}
+							
+								protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+								{
+									while (!stoppingToken.IsCancellationRequested)
+									{
+										using (var scope = _provider.CreateScope())
+										{
+											var api = scope.ServiceProvider.GetRequiredService<CurrencyService>();
+											var db = scope.ServiceProvider.GetRequiredService<ExchangeDbContext>();
+											var result = await api.GetRandomCurrency();
+											if (result is not null) {
+												await db.AddAsync(result);
+												await db.SaveChangesAsync();
+											}
+										}
+										_logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+										await Task.Delay(3500, stoppingToken);
+									}
+								}
+							}							
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/Worker.cs</small>
+					</section>
+					<section>
+						<h2>Registering background tasks</h2>
+						<pre><code class="cs" data-line-numbers="|9|10-14|" data-trim data-noescape><script type="text/template">
+							using Microsoft.EntityFrameworkCore;
+
+							using ScopedService.Worker;
+							using ScopedService.Data;
+							
+							IHost host = Host.CreateDefaultBuilder(args)
+									.ConfigureServices((context, services) =>
+									{
+										services.AddHostedService<Worker>();
+										services.AddHttpClient<CurrencyService>();
+										services.AddDbContext<ExchangeDbContext>(options => 
+										options
+											.UseSqlServer(context.Configuration.GetConnectionString("Exchange"))
+										);
+									})
+									.Build();
+							
+							await host.RunAsync();
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/Program.cs</small>
+					</section>
+					<section>
+						<h2>Scoped services in background tasks</h2>
+						<ul>
+							<li>The ASP.NET framework creates a new container <mark>scope</mark> every time a new request is received</li>
+							<li><code>IHostedService</code> services are created exactly <mark>once</mark> when the application starts
+								<ul>
+									<li>This can be a <mark>challenge</mark>, if we want to use a scoped service in a background task</li>
+									<li>Any dependencies added to a service must have a <mark>lifetime</mark> that is <mark>equal</mark> or <mark>longer</mark> than that of service itself</li>
+								</ul>
+							<li>Create container scopes with <code>IServiceCollection.CreateScope()</code></li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 694-695</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Scoped services in background tasks</h2>
+						<pre><code class="cs" data-line-numbers="|10-11,14|13|20-21,29|22-23|24|25,28|26-27|" data-trim data-noescape><script type="text/template">
+							using ScopedService.Data;
+
+							namespace ScopedService.Worker;
+							
+							public class Worker : BackgroundService
+							{
+								private readonly ILogger<Worker> _logger;
+								private readonly IServiceProvider _provider;
+							
+								public Worker(ILogger<Worker> logger, IServiceProvider provider)
+								{
+									_logger = logger;
+									_provider = provider;
+								}
+							
+								protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+								{
+									while (!stoppingToken.IsCancellationRequested)
+									{
+										using (var scope = _provider.CreateScope())
+										{
+											var api = scope.ServiceProvider.GetRequiredService<CurrencyService>();
+											var db = scope.ServiceProvider.GetRequiredService<ExchangeDbContext>();
+											var result = await api.GetRandomCurrency();
+											if (result is not null) {
+												await db.AddAsync(result);
+												await db.SaveChangesAsync();
+											}
+										}
+										_logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+										await Task.Delay(1000, stoppingToken);
+									}
+								}
+							}							
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/Worker.cs</small>
+					</section>
+					<section>
+						<h2>Service with <code>HttpClient</code></h2>
+						<pre><code class="cs" data-line-numbers="|6,8,10,21|13-16|7,18-20|" data-trim data-noescape><script type="text/template">
+							using System.Net.Http.Json;
+							using ScopedService.Data;
+							
+							namespace ScopedService.Worker;
+							
+							public interface ICurrencyService {
+								public Task<Currency?> GetRandomCurrency();
+							}
+							
+							public class CurrencyService : ICurrencyService {
+								private readonly HttpClient _client;
+								
+								public CurrencyService(HttpClient client) {
+									_client = client;
+									_client.BaseAddress = new Uri("https://localhost:5000");
+								}
+							
+								public async Task<Currency?> GetRandomCurrency() {
+									return await _client.GetFromJsonAsync<Currency>("api/currencies/single");
+								}
+							}							
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/CurrencyService/CurrencyService.cs</small>
+					</section>
+					<section>
+						<h2>Problems</h2>
+						<ul>
+							<li>Typed clients are designed to be <mark>short-lived</mark>
+								<ul>
+									<li>To take advantage of <code>HttpClient</code> handler rotation</li>
+								</ul>
+							</li>
+							<li>Background services are <mark>singletons</mark>
+								<ul>
+									<li>Created exactly once for the application lifetime</li>
+								</ul>
+							</li>
+							<li><mark>Solution</mark> Apply the factory pattern for HTTP services</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://www.stevejgordon.co.uk/ihttpclientfactory-patterns-using-typed-clients-from-singleton-services">IHttpClientFactory Patterns: Using Typed Clients from Singleton Services - Steve Gordon - Code with Steve</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Service factory</h2>
+						<pre><code class="cs" data-line-numbers="|12-15|17-20|" data-trim data-noescape><script type="text/template">
+							namespace ScopedService.Worker;
+
+							public interface ICurrencyServiceFactory 
+							{
+								ICurrencyService GetCurrencyService();
+							}
+							
+							public class CurrencyServiceFactory : ICurrencyServiceFactory 
+							{
+								private readonly IServiceProvider _provider;
+							
+								public CurrencyServiceFactory(IServiceProvider provider) 
+								{
+									_provider = provider;
+								}
+							
+								public ICurrencyService GetCurrencyService() 
+								{
+									return _provider.GetRequiredService<ICurrencyService>();
+								}
+							}
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/CurrencyService/CurrencyServiceFactory.cs</small>
+					</section>
+					<section>
+						<h2>Worker with factory</h2>
+						<pre><code class="cs" data-line-numbers="|8,10-13,15-16,24|19-20|" data-trim data-noescape><script type="text/template">
+							using ScopedService.Data;
+
+							namespace ScopedService.Worker;
+							
+							public class CorrectWorker : BackgroundService
+							{
+								private readonly ILogger<CorrectWorker> _logger;
+								private readonly ICurrencyServiceFactory _factory;
+							
+								public CorrectWorker(ILogger<CorrectWorker> logger, ICurrencyServiceFactory factory) {
+									_logger = logger;
+									_factory = factory;
+								}
+							
+								protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+								{
+									while (!stoppingToken.IsCancellationRequested)
+									{
+										var api = _factory.GetCurrencyService();
+										var result = await api.GetRandomCurrency();
+										_logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+										await Task.Delay(3500, stoppingToken);
+									}
+								}
+							}
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/CurrencyService/CurrencyServiceFactory.cs</small>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Headless worker services</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>Background tasks can be created in <mark>two</mark> ways
+								<ul>
+									<li>Classes implementing <code>BackgroundService</code> in <mark>ASP.NET</mark> Core projects</li>
+									<li><mark>Stand-alone</mark> .NET applications</li>
+								</ul>
+							</li>
+							<li>HTTP functionality not added by default
+								<ul>
+									<li>Add <code>package Microsoft.Extensions.Http</code> if you need to fetch data using HTTP</li>
+								</ul>
+							</li>
+							<li>Stand-alone services use the <mark>same</mark> features as ASP.NET Core
+								<ul>
+									<li>Dependency Injection (Lesson 06)</li>
+									<li>Configuration (Lesson 07)</li>
+									<li>Logging (Lesson 10)</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 698-700</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Running in production</h2>
+						<ul>
+							<li>Worker services are .NET console application
+								<ul>
+									<li>Intended for <mark>long-running</mark> processes</li>
+								</ul>
+							</li>
+							<li>Commonly <mark>registered</mark> as service with the operating system
+								<ul>
+									<li>Windows Service on Microsoft-based systems</li>
+									<li><code>systemd</code> on Unix-based systems</li>
+								</ul>
+							</li>
+							<li>Can be deployed like any other .NET application
+								<ul>
+									<li>Running in an isolated <mark>container</mark></li>
+									<li><mark>Framework-dependent</mark> where the .NET runtime is installed on the host machine</li>
+									<li><mark>Self-contained</mark> where the the .NET runtime is bundled with the application</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy">Host and deploy ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Installing as a service</h2>
+						<ul>
+							<li>Running the service as a <code>systemd</code> application on <mark>Linux</mark>
+								<ul>
+									<li>Add the <code>Microsoft.Extensions.Hosting.Systemd</code> NuGet package</li>
+									<li>Call <code>UseSystemd()</code> on <code>IHostBuilder</code></li>
+								</ul>
+							</li>
+							<li>Run as a <mark>Windows</mark> service
+								<ul>
+									<li>Add <code>Microsoft.Extensions.Hosting.WindowsServices</code> NuGet package</li>
+									<li>Call <code>UseWindowdService()</code> on <code>IHostBuilder</code></li>
+								</ul>
+							</li>
+							<li>We can register ASP.NET Core applications as services
+								<ul>
+									<li>The underlying Krestel server runs as an <code>IHostedService</code></li>
+								</ul>
+							</li>
+							<li>There are <mark>security</mark> considerations that needs to be addressed</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx">Host ASP.NET Core on Linux with Nginx | Microsoft Docs</a></li>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/windows-service">Host ASP.NET Core in a Windows Service | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Background tasks<br />using<br/>Quartz.NET</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>More control over when specific tasks are scheduled</li>
+							<li>Quartz.NET main concepts
+								<ul>
+									<li><mark>Jobs</mark> Background tasks that implements the logic</li>
+									<li><mark>Triggers</mark> Control when Jobs will run</li>
+									<li><mark>Job Factory</mark> Creates instances of Jobs</li>
+									<li><mark>Scheduler</mark> Keeps track of application triggers</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href=""></a></li>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 703-704</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Installation</h2>
+						<ol>
+							<li>Add the NuGet packages
+								<ul>
+									<li><code>dotnet add package Quartz.Extensions.Hosting</code></li>
+								</ul>
+							</li>
+							<li>Add the scheduler to IServiceCollection
+								<ul>
+									<li><code>AddQuartzHostedService()</code></li>
+									<li>Set <code>WaitForJobsToComplete</code> to <code>true</code></li>
+								</ul>
+							</li>
+							<li>Configure the required services in <code>ConfigureServices</code>
+								<ul>
+									<li>Setup triggers and jobs</li>
+								</ul>
+							</li>
+						</ol>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 704-705</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Setup Quartz</h2>
+						<pre><code class="cs" data-line-numbers="|1,17-18,19,21|3|4|6|7,14|8|9|10|11,14|12|13|19-21|" data-trim data-noescape><script type="text/template">
+							builder.Services.AddQuartz(
+								q => {
+									q.UseMicrosoftDependencyInjectionJobFactory();
+									var keyWrite = new JobKey("WriteRandomNumberJob");
+									// ...
+									q.AddJob<WriteRandomNumberJob>(keyWrite);
+									q.AddTrigger(opts => opts
+										.ForJob(keyWrite)
+										.WithIdentity(keyWrite.Name)
+										.StartNow()
+										.WithSimpleSchedule(x => x
+											.WithInterval(TimeSpan.FromSeconds(5))
+											.RepeatForever()
+										)
+									);
+									// ...
+								}
+							);
+							builder.Services.AddQuartzHostedService(
+									q => q.WaitForJobsToComplete = true
+							);
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/ScopedService/ScopedService.Worker/CurrencyService/CurrencyServiceFactory.cs</small>
+					</section>
+					<section>
+						<h2><code>IJob</code> implementation</h2>
+						<pre><code class="cs" data-line-numbers="|5-6,23|16-22|" data-trim data-noescape><script type="text/template">
+							using Quartz.Data;
+
+							namespace Quartz.API;
+
+							public class WriteRandomNumberJob : IJob
+							{
+								private readonly ILogger<WriteRandomNumberJob> _logger;
+								private readonly RandomNumberDbContext _dbContext;
+
+								public WriteRandomNumberJob(ILogger<WriteRandomNumberJob> logger, RandomNumberDbContext dbContext) 
+								{
+									_dbContext = dbContext;
+									_logger = logger;
+								}
+
+								public async Task Execute(IJobExecutionContext context)
+								{
+									await _dbContext.AddAsync(new RandomNumber {
+										Number = new Random().Next()
+									});
+									await _dbContext.SaveChangesAsync();
+								}
+							}
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/Quartz/Quartz.API/WriteRandomNumberJob.cs</small>
+					</section>
+					<section>
+						<h2>Clustering</h2>
+						<ul>
+							<li>Must be considered when <mark>scaling</mark> the application <mark>horizontally</mark>
+								<ul>
+									<li><mark>Challenge</mark> Each instance would create a background task</li>
+								</ul>
+							</li>
+							<li>Possible solutions
+								<ul>
+									<li>Move the task to a <mark>separate</mark> application (a <mark>headless</mark> worker service)</li>
+									<li>Enable clustering to distribute tasks <mark>across</mark> instances</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 708-711</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Quartz clustering</h2>
+						<pre><code class="cs" data-line-numbers="|4,9|5|6|7|8|" data-trim data-noescape><script type="text/template">
+							builder.Services.AddQuartz(
+								q => {
+									// ...
+									q.UsePersistentStore(s => {
+											s.UseSqlServer(connectionString);
+											s.UseClustering();
+											s.UseProperties = true;
+											s.UseJsonSerializer();
+								});
+							}
+						);
+						</script></code></pre>
+						<small>examples/lesson-14-background-services/Quartz/Quartz.API/Program.cs</small>
+					</section>
+					<section>
+						<h2>Clustering</h2>
+						<img width="width: 60%;" src="../../assets/quartz-clustering.png" alt="quartz-clustering"/>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>John Smith, ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 710</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Persistent database</h2>
+						<ul>
+							<li>Quartz.NET relies on a <mark>persistent</mark> database for clustering
+								<ul>
+									<li>Support a wide range of databases: MySQL, Oracle, SQL Server, etc.</li>
+								</ul>
+							</li>
+							<li>Uses database as backing store
+								<ul>
+									<li>Can also be used for only persistence</li>
+									<li>If used for clustering, must support <mark>locking</mark> primitives</li>
+								</ul>
+							</li>
+							<li>Does not create the tables automatically
+								<ul>
+									<li>Add the required tables <mark>manually</mark></li>
+									<li>Can be managed with Entity Framework Core <mark>migrations</mark></li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+						</aside>
+					</section>
+				</section>
+				<section>
+					<h2>Wrap-up</h2>
+					<ul>
+						<li>Background services
+							<ul>
+								<li>Use cases</li>
+								<li>Deployment</li>
+							</ul>
+						</li>
+						<li>Implementing background tasks in .NET</li>
+						<li>Quartz.NET</li>
+					</ul>
+				</section>
+			</div>
+		</div>
+
+		<script src="../../dist/reveal.js"></script>
+		<script src="../../plugin/notes/notes.js"></script>
+		<script src="../../plugin/markdown/markdown.js"></script>
+		<script src="../../plugin/highlight/highlight.js"></script>
+		<script src="../../js/asciinema-player.js"></script>
+
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				slideNumber: true,
+				pdfSeparateFragments: false,
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>

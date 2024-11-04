@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Lesson 07</title>
+
+		<link rel="stylesheet" href="../../dist/reset.css">
+		<link rel="stylesheet" href="../../dist/reveal.css">
+		<link rel="stylesheet" href="../../dist/theme/black.css">
+		<link rel="stylesheet" type="text/css" href="../../css/asciinema-player.css" />
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="../../plugin/highlight/github-dark.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<section id="introduction">
+							<h1>Configuring ASP.NET Core applications</h1>
+							<h3>Lesson 07</h3>
+							<h4>SW4BED-01</h4>
+					</section>
+					<section>
+						<h2>Agenda</h2>
+						<ul>
+							<li>Application configuration</li>
+							<li>Options pattern</li>
+							<li>Environments</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-6.0">Configuration in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Configuration</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>Tweak various settings at deploy time
+								<ul>
+									<li>No need for <mark>re-compilation</mark> or <mark>restarts</mark></li>
+									<li>A <mark>setting</mark> is a value that changes the <mark>behavior</mark> of an application</li>
+								</ul>
+							</li>
+							<li>Sources
+								<ul>
+									<li>JSON, XML, YAML, etc.</li>
+									<li>Environment variables</li>
+									<li>Command-line arguments</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Configuration in ASP.NET Core</h2>
+					</section>
+					<section>
+						<h2>Configuration providers</h2>
+						<ul>
+							<li>ASP.NET Core uses configuration providers
+								<ul>
+									<li>Loads <mark>key-value</mark> pairs (<code>{"key":"value"}</code></li>
+									<li>An application can have <mark>any</mark> number of configuration providers</li>
+								</ul>
+							</li>
+							<li>Available providers:
+								<ul>
+									<li>Azure Key Vault</li>
+									<li>Azure App</li>
+									<li>Environment Variables</li>
+									<li>Command-line</li>
+									<li>File</li>
+									<li>User secrets</li>
+									<li>Custom</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Loading configurations</h2>
+						<ul>
+							<li>Applied in the following <mark>order</mark> (default configuration):
+								<ol>
+									<li>Add host configuration</li>
+									<li><code>appsettings.json</code></li>
+									<li><code>appsettings.{ENVIRONMENT}.json</code></li>
+									<li>App secrets (when running in the <code>Development</code> environment)</li>
+									<li>Environment variables</li>
+									<li>Command-line arguments</li>
+								</ol>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Overriding settings</h2>
+						<ul>
+							<li>Load settings from <mark>multiple</mark> sources to create "layers" i a configuration
+								<ul>
+									<li>The <mark>order</mark> in which configuration providers are added is <mark>significant</mark></li>
+								</ul>
+							</li>
+							<li>Produces a single <mark>cohesive</mark> configuration object</li>
+						</ul>
+						<img src="../../assets/layered-configuration.jpg" width="60%" alt="layered-configuration" />
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 340-342</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Loading and overriding settings</h2>
+						<pre><code class="csharp" data-line-numbers="|1,14|2|3|4-6|7-9|10-12|" data-trim data-noescape><script type="text/template">
+							builder.Host.ConfigureAppConfiguration((hostingContext, config) => {
+								var env = hostingContext.HostingEnvironment;
+								config.AddIniFile("MyConfig.ini", optional: true, reloadOnChange: true)
+											.AddIniFile($"MyConfig.{env.EnvironmentName}.ini", 
+												optional: true, 
+												reloadOnChange: true)
+											.AddJsonFile("material-theme.json", 
+												optional: false, 
+												reloadOnChange: true)
+											.AddJsonFile($"material-theme.{env.EnvironmentName}.json", 
+												optional: false, 
+												reloadOnChange: true
+											);
+							});
+						</script></code></pre>	
+						<small>examples/lesson-07-configuration/WebAPIConfiguration/Program.cs</small>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Options pattern</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>The preferred way to read <mark>hierarchical</mark> configuration data</li>
+							<li>Provide <mark>strongly</mark> type access to groups of related settings
+								<ul>
+									<li>Isolatation by scenario(s) adhere to Interface Segregation Principle (ISP) and separation of concerns</li>
+								</ul>
+							</li>
+							<li><mark>Validation</mark> of configuration data</li>
+							<li>Should be used instead of <code>IConfiguration</code></li>
+							<li>Used troughout the ASP.NET Core</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options">Options pattern in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>The <code>IOptions</code> interface</h2>
+						<ul>
+							<li>A <mark>simple</mark> interface with a single property (<code>Value</code>), which contains the configured Plain Old CLR Object (POCO) options class at runtime</li>
+							<li>How to use <code>IOptions</code>
+								<ul>
+									<li>Options classes are configured at <mark>startup</mark> in <code>Program.cs</code></li>
+									<li>Injected in <code>Controller</code> and/or <code>Model</code> classes</li>
+								</ul>
+							</li>
+							<li>Options loaded with <code>IOptions</code> created <mark>exactly</mark> once
+								<ul>
+									<li>Use <code>IOptionsSnapshot</code> to <mark>recreate</mark> options upon changes</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 349-350</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Binding Option classes</h2>
+						<ul>
+							<li>POCO classes need to
+								<ul>
+									<li>Be <mark>non-abstract</mark></li>
+									<li>Have a <mark>default</mark> constructor</li>
+								</ul>
+							</li>
+							<li>Properties need to <mark>adhere</mark> to the following <mark>rules</mark> to bind automatically
+								<ul>
+									<li>Declared with the <code>public</code> access modifier</li>
+									<li>Have a <code>get</code> accessor (<code>set</code>-only properties will not be bound)</li>
+									<li>Have a <code>set</code> accessor (or non-<code>null</code> value for complex types)</li>
+									<li>Is not an indexer</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 349-350</li>
+								<li><a href="https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/">Indexers - C# Programming Guide | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>POCO option class</h2>
+						<pre><code class="csharp" data-line-numbers data-trim data-noescape><script type="text/template">
+							namespace WebAPIConfiguration.Options;
+
+							public class AppShellOptions {
+								public const string AppShell = "AppShell";
+
+								public ColorsOption? Colors { get; set; }
+
+								public class ColorsOption {
+									public string Primary { get; set; } = String.Empty;
+									public string PrimaryLight { get; set; } = String.Empty;
+									public string PrimaryDark { get; set; } = String.Empty;
+									public string Secondary { get; set; } = String.Empty;
+									public string SecondaryLight { get; set; } = String.Empty;
+									public string SecondaryDark { get; set; } = String.Empty;
+								}
+							}
+						</script></code></pre>	
+						<small>examples/lesson-07-configuration/WebAPIConfiguration/Options/AppShellOptions.cs</small>
+					</section>
+					<section>
+						<h2>The settings file</h2>
+						<pre><code class="json" data-line-numbers data-trim data-noescape><script type="text/template">
+							{
+								"Colors": {
+									"Primary": "#009688",
+									"PrimaryLight": "#52c7b8",
+									"PrimaryDark": "#00675b",
+									"Secondary": "#d81b60",
+									"SecondaryLight": "#ff5c8d",
+									"SecondaryDark": "#a00037"
+								},
+								"Fonts": {
+									"Display": {
+										"Url": "",
+										"Size": 24
+									},
+									"Body": {
+										"Url": "",
+										"Size": 12
+									}
+								}  
+							}
+						</script></code></pre>	
+						<small>examples/lesson-07-configuration/WebAPIConfiguration/material-theme.json</small>
+					</section>
+					<section>
+						<h2>Using settings</h2>
+						<pre><code class="csharp" data-line-numbers="|13|15|16|23|" data-trim data-noescape><script type="text/template">
+							using Microsoft.AspNetCore.Cors;
+							using Microsoft.AspNetCore.Mvc;
+							using Microsoft.Extensions.Options;
+							
+							using WebAPIConfiguration.Options;
+							
+							namespace WebAPIConfiguration.Controllers;
+							
+							[ApiController]
+							[Route("[controller]")]
+							public class ThemeController : Controller 
+							{
+								private readonly AppShellOptions _options;
+							
+								public ThemeController(IOptionsSnapshot<AppShellOptions> configuration) {
+									_options = configuration.Value;
+								}
+							
+								[EnableCors("Theme")]
+								[HttpGet]
+								public IActionResult GetTheme()
+								{
+									return Json(_options);
+								}
+							}
+						</script></code></pre>
+						<small>examples/lesson-07-configuration/WebAPIConfiguration/Program.cs</small>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Environments</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>ASP.NET Core configures application behavior based on <mark>environments</mark></li>
+							<li>Three environments defined per default:
+								<ul>
+									<li><mark>Development</mark> Used for development on <mark>local</mark> machines</li>
+									<li><mark>Staging</mark> A nearly exact <mark>environments</mark> of the production environment</li>
+									<li><mark>Production</mark> The environment exposed to <mark>end-users</mark></li>
+								</ul>
+							</li>
+							<li>Defined in enviroment variable <code>ASPNETCORE_ENVIRONMENT</code> 
+								<ul>
+									<li>If not set, it will default to <code>Production</code></li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/environments">Use multiple environments in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Common use cases</h2>
+						<ul>
+							<li><mark>Customization</mark> of middleware <mark>pipeline</mark>
+								<ul>
+									<li>Exception pages</li>
+									<li>Enable <code>Strict-Transport-Security</code> headers (HSTS)</li>
+								</ul>
+							</li>
+							<li>Loading <mark>environment-specific</mark> configuration files
+								<ul>
+									<li>Logging configuration</li>
+									<li>Endpoints</li>
+								</ul>
+							</li>
+							<li><mark>Add/remove</mark> configuration providers
+								<ul>
+									<li>User Secret Manager for development. Azure Key Vault for production, etc.</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security">Strict-Transport-Security - HTTP | MDN</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Configure service and middleware</h2>
+						<pre><code class="csharp" data-line-numbers="|9-10,13-15,18|11-12|16-17|" data-trim data-noescape><script type="text/template">
+							using System.Text.Json;
+							using Microsoft.EntityFrameworkCore;
+							using WebAPIConfiguration.Data;
+							using WebAPIConfiguration.Model;
+							
+							var builder = WebApplication.CreateBuilder(args);
+							
+							// Add services to the container.
+							if (builder.Environment.IsDevelopment())
+							{
+								builder.Services.AddDbContext<NetLogContext>(options =>
+									options.UseInMemoryDatabase("NetLogDev"));
+							}
+							else
+							{
+								builder.Services.AddDbContext<NetLogContext>(options =>
+									options.UseSqlServer(builder.Configuration.GetConnectionString("NetLog")));
+							}
+							
+							builder.Services.AddControllers();
+							
+							// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+							builder.Services.AddEndpointsApiExplorer();
+							builder.Services.AddSwaggerGen();
+							
+							var app = builder.Build();
+							
+							// Configure the HTTP request pipeline.
+							if (app.Environment.IsDevelopment())
+							{
+								app.UseSwagger();
+								app.UseSwaggerUI();
+								
+								seedData();
+							}
+							
+							app.UseHttpsRedirection();
+							app.UseAuthorization();
+							app.MapControllers();
+							app.Run();
+							
+							void seedData() {
+								using(var scope = app.Services.CreateScope()) {
+									using FileStream fs = File.OpenRead("MOCK_DATA.json");
+									var logs = JsonSerializer.Deserialize<NetLog[]>(fs, new JsonSerializerOptions {
+										PropertyNameCaseInsensitive = true,
+									});
+							
+									var context = scope.ServiceProvider.GetRequiredService<NetLogContext>();
+										context.Database.EnsureCreated();
+										context.AddRange(logs);
+										context.SaveChanges();
+								}
+							}
+						</script></code></pre>	
+						<small>examples/lesson-07-configuration/WebAPIConfiguration/Program.cs</small>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Storing sensitive data</h2>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li><mark>NEVER</mark> store passwords or other sensitive data in source code
+								<ul>
+									<li>Connection strings</li>
+									<li>API keys</li>
+								</ul>
+							</li>
+							<li>Production secrets should not be used for development</li>
+							<li>Secrets should not be deployed with the application
+								<ul>
+									<li>They should be accessed through the <mark>environment</mark></li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>App secrets</h2>
+						<ul>
+							<li>The Secret Manager tools stores <mark>sensitive</mark> data during <mark>development</mark>
+								<ul>
+									<li>App secrets are stored in a <mark>separate</mark> location from the project tree</li>
+									<li><mark>NOT</mark> checked into source control</li>
+									<li>Does NOT <mark>encrypt</mark> the stored secrets and should NOT be treated as a trusted store</li>
+								</ul>
+							</li>
+							<li>Secrets are created as name-value pairs</li>
+							<li>Use Azure Key Vault in <mark>production</mark></li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets">Safe storage of app secrets in development in ASP.NET Core | Microsoft Docs</a></li>
+								<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 342-346</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>How to use Secret Manager</h2>
+						<ul>
+							<li>Initialize user secrets (run from project root directory)
+								<ul>
+									<li><code>dotnet user-secrets init</code></li>
+								</ul>
+							</li>
+							<li>Set a secret
+								<ul>
+									<li><code>dotnet user-secrets set "{SECRET NAME}" "{SECRET VALUE}"</code></li>
+								</ul>
+							</li>
+							<li>Accessing User Secrets
+								<ul>
+									<li>Can be <mark>mapped</mark> to <code>Option</code> classes as any other settings</li>
+									<li>Can be accessed as any other environment variable</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets">Safe storage of app secrets in development in ASP.NET Core | Microsoft Docs</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Accessing user secrets</h2>
+						<pre><code class="csharp" data-line-numbers data-trim data-noescape><script type="text/template">
+							var appSecrets = builder.Configuration
+								.GetSection("ConnectionStrings")
+								.Get<AppSecretOptions>();
+
+							if(appSecrets.NetLog is not null) {
+								builder.Services.AddDbContext<NetLogContext>(options =>
+										options.UseSqlServer(appSecrets.NetLog));
+							}
+						</script></code></pre>
+						<small>examples/lesson-07-configuration/UserSecrets/Program.cs</small>
+					</section>
+				</section>
+				<section>
+					<h2>Wrap-up</h2>
+					<ul>
+						<li>Application configuration
+							<ul>
+								<li>Extract configuration from implementation</li>
+							</ul>
+						</li>
+						<li>Options pattern
+							<ul>
+								<li>Use strongly-typed configuration objects and dependency injection</li>
+							</ul>
+						</li>
+						<li>Environments
+							<ul>
+								<li>Change configuration based on environment</li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+			</div>
+		</div>
+
+		<script src="../../dist/reveal.js"></script>
+		<script src="../../plugin/notes/notes.js"></script>
+		<script src="../../plugin/markdown/markdown.js"></script>
+		<script src="../../plugin/highlight/highlight.js"></script>
+		<script src="../../js/asciinema-player.js"></script>
+
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				slideNumber: true,
+				pdfSeparateFragments: false,
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>

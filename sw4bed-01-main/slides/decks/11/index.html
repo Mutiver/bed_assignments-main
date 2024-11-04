@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>Lesson 11</title>
+
+	<link rel="stylesheet" href="../../dist/reset.css">
+	<link rel="stylesheet" href="../../dist/reveal.css">
+	<link rel="stylesheet" href="../../dist/theme/black.css">
+	<link rel="stylesheet" type="text/css" href="../../css/asciinema-player.css" />
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="../../plugin/highlight/github-dark.css">
+</head>
+
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section>
+				<section id="improving-application-security">
+					<h1>Improving application security</h1>
+					<h3>Lesson 11</h3>
+					<h4>SW4BED-01</h4>
+				</section>	
+				<section id="agenda">
+					<h2>Agenda</h2>
+					<ul>
+						<li><mark>Encrypting</mark> traffic using HTTPS</li>
+						<li><mark>Defending</mark> against cross-site scripting attacks (XSS)</li>
+						<li><mark>Protecting</mark> from cross-site request forgery attacks (CSRF)</li>
+						<li>Allowing calls from other <mark>origins</mark> using Cross-origin Resource Sharing (CORS)</li>
+						<li>Other attack <mark>vectors</mark></li>
+					</ul>
+				</section>
+			</section>
+			<section id="introduction">
+				<h2>Introduction</h2>
+				<ul>
+					<li>Web application <mark>security</mark> is a hot topic at the moment
+						<ul>
+							<li>The digital <mark>transformation</mark> are putting our data in the cloud</li>
+							<li>A rise in cyber-related <mark>crime</mark></li>
+						</ul>
+					</li>
+					<li>We should know the different attack <mark>vectors</mark>
+						<ul>
+							<li>So we can defend against them</li>
+							<li>So we do not introduce <mark>vulnerabilities</mark> in our applications</li>
+						</ul>
+					</li>
+					<li>We will look at security from an ASP.NET Core point-of-view
+						<ul>
+							<li>But everything is <mark>applicable</mark> to other technology stacks</li>
+						</ul>
+					</li>
+				</ul>
+			</section>
+			<section>
+				<section>
+					<h2>Encrypting traffic using HTTPS</h2>
+				</section>
+				<section>
+					<h2>Why HTTPS?</h2>
+					<ul>
+						<li>We need HTTPS for three reasons:
+							<ul>
+								<li><mark>Privacy</mark> Prevent bad actors from eavesdropping</li>
+								<li><mark>Integrity</mark> Prevent bad actors to modify the message</li>
+								<li><mark>Identification</mark> Guarantee the identity of the sender</li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>HTTP requests are <mark>unencrypted</mark> by default
+							<ul>
+								<li>They are <mark>plaintext</mark> files sent over the network</li>
+							</ul>
+						</li>
+						<li>Transport Layer Security (TLS) is a cryptographic <mark>protocol</mark> used to encrypt communication</li>
+						<li>Two <mark>approaches</mark>
+							<ul>
+								<li>Directly in the application</li>
+								<li>TLS-offloading with reverse proxy (Transport Layer Security)</li>
+							</ul>
+						</li>
+						<li>Security headers</li>
+						<li>HTTP redirection</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Public key cryptography</h2>
+					<ul>
+						<li>A key pair consists of two parts:
+							<ul>
+								<li>A <mark>public</mark> key, that anyone can see</li>
+								<li>A <mark>private</mark> key, that only the server can see</li>
+							</ul>
+						</li>
+						<li>Data <mark>encrypted</mark> with the public key can only be <mark>decrypted</mark> with the private key</li>
+						<li>TLS <mark>handshake</mark>
+							<ul>
+								<li>Client/server key exchange and verification</li>
+								<li>Master secret</li>
+								<li>Data transmission</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html">Transport Layer Protection - OWASP Cheat Sheet Series</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Certificate authorities</h2>
+					<ul>
+						<li>Certificate authorities (CAs) are special <mark>trusted</mark> entities, and browsers are hardcoded to trust certain <mark>root</mark> certificates</li>
+						<li>ASP.NET Core uses development certificates for development
+							<ul>
+								<li>Not trusted by default</li>
+								<li>You must <mark>explicitly</mark> trust development certificates</li>
+								<li>Cannot be used in production environments (Let's Encrypt, Azure, AWS, Cloudflare, etc.)</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes"> 
+						<h4>Reference</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 577</li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section>
+					<h2>HTTPS with Docker</h2>
+				</section>
+				<section>
+					<h2>Docker</h2>
+					<ul>
+						<li>You could just <mark>copy</mark> the certificate into container images, but it has some <mark>disadvantages</mark>:
+							<ul>
+								<li>It makes difficult to use the same image for testing with developer certificates</li>
+								<li>It makes difficult to use the same image for hosting with production certificates</li>
+								<li>There is significant risk of certificate <mark>disclosure</mark></li>
+							</ul>
+						</li>
+						<li>When instatiating a container, use the following configuration
+							<ul style="font-size: 0.5em">
+								<li><code>-p 8000:80</code></li>
+								<li><code>-p 8001:443</code></li> 
+								<li><code>-e ASPNETCORE_URLS="https://+;http://+"</code></li> 
+								<li><code>-e ASPNETCORE_HTTPS_PORT=8001</code></li>
+								<li><code>-e ASPNETCORE_Kestrel__Certificates__Default__Password="password"</code></li>
+								<li><code>-e ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx</code></li>
+								<li><code>-v ${HOME}/.aspnet/https:/https/</code></li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/docker-https">Hosting ASP.NET Core Images with Docker over HTTPS | Microsoft Docs</a></li>
+							<li><a href="https://github.com/dotnet/dotnet-docker/blob/main/samples/run-aspnetcore-https-development.md">dotnet-docker/run-aspnetcore-https-development.md at main · dotnet/dotnet-docker</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Docker compose</h2>
+					<pre><code class="yaml" data-line-numbers="|4|5|6-8|9-14|15-16|" data-trim data-noescape><script type="text/template">
+						version: "3.9"
+
+						services:
+							webapp:
+								build: .
+								ports:
+									- 5000:80
+									- 5001:443
+								environment:
+									- ASPNETCORE_ENVIRONMENT=Development
+									- ASPNETCORE_HTTPS_PORT=5001
+									- ASPNETCORE_URLS=https://+:443;http://+:80
+									- ASPNETCORE_Kestrel__Certificates__Default__Password=shhsecret
+									- ASPNETCORE_Kestrel__Certificates__Default__Path=/https/lesson-11.pfx
+								volumes:
+									- ~/.aspnet/https:/https:ro
+					</script></code></pre>
+					<small>examples/lesson-11-improving-application-security/SecureDockerContainer/docker-compose.yaml</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/docker-compose-https">Hosting ASP.NET Core image in container using docker compose with HTTPS | Microsoft Docs</a></li>
+							<li><a href="https://docs.microsoft.com/en-us/dotnet/core/additional-tools/self-signed-certificates-guide">Generate Self-Signed Certificates Overview - .NET | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section>
+					<h2>Cross-origin resource sharing (CORS)</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>Allows browser applications to make <mark>requests</mark> from one domain to another
+							<ul>
+								<li>This is prevented by the <mark>Same-origin</mark> policy by default</li>
+							</ul>
+						</li>
+						<li>The need to make <mark>cross-origin</mark> requests has become common with client-side single-page applications (SPAs)</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Same-origin policy</h2>
+					<ul>
+						<li>Two URLs have the same origin if they have <mark>identical</mark> schemes, hosts, and ports</li>
+						<li>These two URLs have the <mark>same</mark> origin
+							<ul>
+								<li><code>https://example.com/foo.html</code></li>
+								<li><code>https://example.com/bar.html</code></li>
+							</ul>
+						</li>
+					<li>These URLs have <mark>different</mark> origins than the previous two URLs
+							<ul>
+								<li><code>https://example.net</code>—Different domain</li>
+								<li><code>https://www.example.com/foo.html</code>—Different subdomain</li>
+								<li><code>http://example.com/foo.html</code>—Different scheme</li>
+								<li><code>https://example.com:9000/foo.html</code>—Different port</li>
+							</ul>
+						</li>
+						<li>Defined in <a href="https://datatracker.ietf.org/doc/html/rfc6454">RFC 6454</a></li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://datatracker.ietf.org/doc/html/rfc6454">rfc6454</a></li>
+							<li><a href="https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy">Same-origin policy - Web security | MDN</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Cross-origin resource sharing</h2>
+					<ul>
+						<li>World Wide Web Consortium (W3C) standard that allows a server to <mark>relax</mark> the same-origin policy</li>
+						<li>Is not a security feature, CORS relaxes security.
+							<ul>
+								<li>APIs is not safer by allowing cross-origin requests</li>
+								<li>APIs is not vulnerable by allowing cross-origin requests</li>
+							</ul>
+					</li>
+						<li>Allows a server to <mark>explicitly</mark> allow some (or all) cross-origin requests, while rejecting others</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Pre-flight</h2>
+					<img src="../../assets/cors-full-request.svg" alt="catcherror" width="50%" />
+				</section>
+				<section>
+					<h2>Enabling CORS</h2>
+					<ul>
+						<li>There are three different ways to enable CORS in a .NET application:
+							<ul>
+								<li><mark>Middleware</mark>
+									<ul>
+										<li>Apply default and named policies to all endpoints</li>
+									</ul>
+								</li>
+								<li><mark>Endpoint routing</mark>
+									<ul>
+										<li>Apply policies on a per-endpoint basis</li>
+										<li>Does not support automatic pre-flight requests</li>
+									</ul>
+								</li>
+								<li><mark>Attributes</mark>
+									<ul>
+										<li>Apply named policies for selected endpoints</li>
+										<li>Different policies can be applied to controllers, page models, or action methods</li>
+									</ul>
+								</li>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/cors">Enable Cross-Origin Requests (CORS) in ASP.NET Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Middleware</h2>
+					<pre><code class="cs" data-line-numbers="|4-5,15|6-13|17-18,24|20-22|21|" data-trim data-noescape><script type="text/template">
+						public class Startup
+						{
+							...
+							public void ConfigureServices(IServiceCollection services)
+							{
+								services.AddCors(options => {
+									options.AddDefaultPolicy(builder => {
+										builder.WithOrigins(
+											"http://localhost:4200",
+											"http://localhost:3000"
+										).AllowAnyHeader().AllowAnyMethod();
+									});
+								});
+								...
+							}
+							...
+							public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+							{
+								...
+								app.UseRouting();
+								app.UseCors();
+								app.UseAuthorization();
+								...
+							}
+						}
+					</script>
+					</code></pre>
+					<small>examples/lesson11-improving-application-security/cors/middleware/Startup.cs</small>
+				</section>
+				<section>
+					<h2>Policies</h2>
+					<pre><code class="cs" data-line-numbers="|6-7,21-22|8-9,13,14-15,20|10-12|16-19|29-31|" data-trim data-noescape><script type="text/template">
+						public class Startup
+						{
+							...
+							public void ConfigureServices(IServiceCollection services)
+							{
+									services.AddCors(options =>
+									{
+										options.AddPolicy("swafe-01.dk", builder =>
+										{
+											builder.WithOrigins(
+													"https://swafe-01.dk"
+											).AllowAnyHeader().AllowAnyMethod();
+										});
+										options.AddPolicy("MyLocalhostPolicy", builder =>
+										{
+											builder.WithOrigins(
+													"http://localhost:4200",
+													"http://localhost:3000"
+											).AllowAnyHeader().AllowAnyMethod();
+										});
+									}
+								);
+								...
+							}
+							...
+							public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+							{
+								...
+								app.UseRouting();
+								app.UseCors();
+								app.UseAuthorization();
+								...
+							}
+						}
+					</script>
+					</code></pre>
+					<small>examples/lesson-11-improving-application-security/cors/attributes/Startup.cs</small>
+				</section>
+				<section>
+					<h2>Controller</h2>
+					<pre><code class="cs" data-line-numbers="|6-7|" data-trim data-noescape><script type="text/template">
+					[ApiController]
+					[Route("[controller]")]
+					public class WeatherForecastController : ControllerBase
+					{
+						...						
+						[EnableCors("MyLocalhostPolicy")]
+						[HttpPost("cors")]
+						public ActionResult<Data> PostCors([FromBody]Data myString)
+						{
+							return Ok(myString);
+						}
+						...
+					}
+				}
+			</script></code></pre>
+					<small>examples/lesson-11-improving-application-security/cors/attributes/Controllers/WeatherForecastController.cs</small>
+				</section>
+				<section>
+					<h2>Wrap-up</h2>
+					<ul>
+						<li>The API (server) need to configure CORS policies
+							<ul>
+								<li>Not the application (client) making the request</li>
+							</ul>
+						</li>
+						<li>Be very careful when defining policies
+							<ul>
+								<li>Only allow what is needed and nothing more</li>
+							</ul>
+						</li>
+						<li>The order in which the CORS middleware is added to the pipeline is important
+							<ul>
+								<li>It should be after <code>UseRouting()</code> and before <code>UseEndpoints()</code></li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section>
+				<section>
+					<h2>Protecting against Cross-site scripting (XSS)</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>A security vulnerability that enables bad actors to place <mark>client-side</mark> scripts into web pages</li>
+						<li>When the page loads, the script could
+							<ul>
+								<li>Steal <mark>cookies</mark> and session <mark>tokens</mark></li>
+								<li><mark>Manipulate</mark> the DOM</li>
+								<li><mark>Redirect</mark> to a malicious site</li>
+							</ul>
+						</li>
+						<li>Generally occurs when an application takes user input and outputs it to a page <mark>without</mark> validation</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/cross-site-scripting">Prevent Cross-Site Scripting (XSS) in ASP.NET Core | Microsoft Docs</a></li>
+							<li><a href="https://owasp.org/www-community/attacks/xss/">Cross Site Scripting (XSS) Software Attack | OWASP Foundation</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Protection against XSS</h2>
+					<ul>
+						<li>Treat any (user) input as <mark>untrusted</mark>
+							<ul>
+								<li>Use proper encoding and <mark>sanitize</mark> user input</li>
+							</ul>
+						</li>
+						<li>Luckily, ASP.NET Core provides <mark>default</mark> protection</li>
+					</ul>
+				</section>
+				<section>
+					<h2>XSS - Vulnerable</h2>
+					<img src="../../assets/xss-vulnerable.png" alt="xss-vulnerable" width="60%" />
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 585</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 585</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>XSS - Protected</h2>
+					<img src="../../assets/xss-protected.png" alt="xss-protected" width="60%" />
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 586</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 586</li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section>
+					<h2>Protecting against Cross-site request forgery (CSRF)</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>CSRF involves a malicious website making <mark>authenticated</mark> requests to an API on behalf of user
+							<ul>
+								<li>Browsers sends cookies automatically on <code>GET</code> and <code>POST</code> requests</li>
+							</ul>
+						</li>
+						<li>Can be a problem for websites or APIs that use <mark>cookies</mark> for authentication</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/security/anti-request-forgery">Prevent Cross-Site Request Forgery (XSRF/CSRF) attacks in ASP.NET Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Protecting against CSRF</h2>
+					<ul>
+						<li><mark>Anti-forgery</mark> tokens are added to forms</li>
+						<li>Tokens are stored in a cookie
+							<ul>
+								<li>Generated at runtime</li>
+								<li>Based on session information</li>
+							</ul>
+						</li>Should be used for <code>POST</code>, <code>DELETE</code> and other request types that <mark>mutate</mark> state</li>
+						<li>ASP.NET Core automatically adds anti-forgery to forms
+							<ul>
+								<li>Razor pages <mark>automatically</mark> validates them</li>
+								<li>MVC controllers does <mark>NOT</mark> (should be decorated with the <code>[ValidateAntiForgeryToken]</code> attribute)</li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+				<section>
+					<h2>CSRF - Vulnerable</h2>
+					<img src="../../assets/xcrf-vulnerable.png" alt="xcrf-vulnerable" width="60%" />
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 589</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 589</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>CSRF - Protected</h2>
+					<img src="../../assets/xcrf-protected.png" alt="xcrf-protected" width="60%" />
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 590</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 590</li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section>
+					<h2>Other attack vectors</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>Open redirect attacks</li>
+						<li>SQL injections</li>
+						<li>Protecting object references</li>
+						<li>Protecting usernames and passwords</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Open redirect attacks</h2>
+					<ul>
+						<li>The user clicks a link in a safe application and get <mark>redirected</mark> to a malicious site
+							<ul>
+								<li>The <code>returnUrl</code> is typically parsed as a query string in the request</li>
+							</ul>
+						</li>
+						<li>Mitigation 
+							<ul>
+								<li><mark>Validate</mark> the redirect URL (<code>returnUrl</code>) before the redirection</li>
+							</ul>
+						</li>
+						<li>ASP.NET Core has built-in helper methods
+							<ul>
+								<li>Identity validates <code>returnUrl</code> by default</li>
+								<li><code>IsLocalUrl()</code> is available from <code>IUrlHelper</code></li>
+								<li><code>LocalRedirect()</code> on <code>ControllerBase</code> throws an exception in the provided URL is not local</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 601-603</li>
+							<li><a href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.iurlhelper.islocalurl">IUrlHelper.IsLocalUrl(String) Method (Microsoft.AspNetCore.Mvc) | Microsoft Docs</a></li>
+							<li><a href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.controllerbase.localredirect">ControllerBase.LocalRedirect(String) Method (Microsoft.AspNetCore.Mvc) | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>SQL injection</h2>
+					<ul>
+						<li>Bad actors <mark>crafts</mark> malicious input that is processed to a vulnerable application
+							<ul>
+								<li>Submitted through a form</li>
+								<li>Passed in the URL as a query string</li>
+							</ul>
+						</li>
+						<li><mark>Exposes</mark> data stored in the database</li>
+						<li>Mitigation
+							<ul>
+								<li>Use a Entity Framework Core (or any other ORM)</li>
+								<li>Use <mark>parameterized</mark> queries</li>
+								<li>Do not <mark>concatenate</mark> user input into crafted queries</li>
+							</ul>
+						</li>
+						<li>Be very careful if using <code>FromSqlRaw()</code></li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 603-604</li>
+							<li><a href="https://docs.microsoft.com/en-us/ef/core/querying/raw-sql">Raw SQL Queries - EF Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Direct object referencing</h2>
+					<ul>
+						<li>A bad actor can access "hidden" data by guessing the object references
+							<ul>
+								<li>What comes after <code>/Recipes/Edit/120</code>?</li>
+							</ul>
+						</li>
+						<li>Mitigation
+							<ul>
+								<li>Use resource-based authorization</li>
+							</ul>
+						</li>
+						<li>Can be sidestepped with <mark>pseudo-random</mark> generated IDs (but why not do it right from the start?)</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>User data</h2>
+					<p>Do not store data that is not needed</p>
+					<h2>🤷‍♂️</h2>
+				</section>
+			</section>
+			<section id="wrap-up">
+				<h2>Wrap-up</h2>
+				<ul>
+					<li>Encrypting traffic with HTTPS
+						<ul>
+							<li>HTTPS, TLS, and certificates</li>
+							<li>Setting up HTTPS with Docker</li>
+						</ul>
+					</li>
+					<li>Protecting against XSS and XSRF</li>
+					<li>Configuring CORS in ASP.NET Core</li>
+					<li>Other attack vectors</li>
+				</ul>
+			</section>
+		</div>
+	</div>
+
+	<script src="../../dist/reveal.js"></script>
+	<script src="../../plugin/notes/notes.js"></script>
+	<script src="../../plugin/markdown/markdown.js"></script>
+	<script src="../../plugin/highlight/highlight.js"></script>
+	<script src="../../js/asciinema-player.js"></script>
+
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+			slideNumber: true,
+			pdfSeparateFragments: false,
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+
+</html>

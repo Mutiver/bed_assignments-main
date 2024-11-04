@@ -1,0 +1,20 @@
+# Please refer https://aka.ms/HTTPSinContainer on how to setup an https developer certificate for your ASP .NET Core service.
+
+version: "3.4"
+
+services:
+  bakeryapi:
+    image: christianboel/bakeryapi
+    build:
+      context: .
+      dockerfile: Dockerfile.API
+    ports:
+      - 6000:6000
+  bakeryweb:
+    image: christianboel/bakeryweb
+    build:
+      dockerfile: Dockerfile.WEB
+    ports:
+      - 5050:5050
+    environment:
+      - API_URL=http://bakeryapi:6000

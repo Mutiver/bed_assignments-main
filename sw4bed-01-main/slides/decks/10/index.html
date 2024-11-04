@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+	<title>Lesson 10</title>
+
+	<link rel="stylesheet" href="../../dist/reset.css">
+	<link rel="stylesheet" href="../../dist/reveal.css">
+	<link rel="stylesheet" href="../../dist/theme/black.css">
+	<link rel="stylesheet" type="text/css" href="../../css/asciinema-player.css" />
+
+	<!-- Theme used for syntax highlighted code -->
+	<link rel="stylesheet" href="../../plugin/highlight/github-dark.css">
+</head>
+
+<body>
+	<div class="reveal">
+		<div class="slides">
+			<section id="introduction">
+				<section>
+					<h3>Publishing and deploying and logging and testing ASP.NET Core applications</h3>
+					<h3>Lesson 10</h3>
+					<h4>SW4BED-01</h4>
+				</section>
+				<section>
+					<h2>Agenda</h2>
+					<ul>
+						<li>Publishing and deploying applications</li>
+						<li>Logging and monitoring applications</li>
+						<li>Testing ASP.NET Core applications</li>
+					</ul>
+				</section>
+			</section>
+			<section>
+				<section id="publishing-and-deploying">
+					<h2>Publishing and deploying applications</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li><code>dotnet publish</code> builds a project for <mark>deployment</mark>
+							<ul>
+								<li>Produces assembly files, dependencies and the .NET runtime (optional)</li>
+								<li>Output located in <code>bin/publish</code></li>
+							</ul>
+						</li>
+						<li>Possible to deploy directly to Azure with Visual Studio</li>
+					</ul>
+				</section>
+				<section id="hosting-model">
+					<h2>ASP.NET Core hosting model</h2>
+					<ul>
+						<li>An ASP.NET Core app is running in a <mark>web server</mark> in a <mark>console</mark> applications
+							<ul>
+								<li>Typically a Krestel instance</li>
+							</ul>
+						</li>
+						<li>Krestel provides the HTTP functionality
+							<ul>
+								<li>Receives requests and return responses</li>
+								<li>Passes any request to the application itself to generate a response</li>
+								<li>The request passes through the <mark>middleware</mark> pipeline</li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+				<section>
+					<h2>ASP.NET Core hosting model</h2>
+					<img src="../../assets/hosting-model.png" width="60%" alt="hosting-model">
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 505</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 505</li>
+						</ul>
+					</aside>
+				</section>
+				<section id="reverse-proxy">
+					<h2>Reverse proxies</h2>
+					<ul>
+						<li>A reverse proxy is responsible for <mark>receiving</mark> requests and <mark>forwarding</mark> them to the appropiate <mark>destination</mark>
+						</li>
+						<li>Exposed <mark>directly</mark> to the internet
+							<ul>
+								<li>Underlying services are exposed to the proxy</li>
+							</ul>
+						</li>
+						<li>Some benefits of using a reverse proxy
+							<ul>
+								<li>Security</li>
+								<li>Support for multiple applications</li>
+								<li>Performance (caching)</li>
+							</ul>
+						</li>
+						<li>Some downsides of using a reverse proxy
+							<ul>
+								<li>Increased <mark>complexity</mark></li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 505-506</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Deployments</h2>
+					<ul>
+						<li><mark>Runtime/framework-dependent</mark>
+							<ul>
+								<li>Small deployments</li>
+								<li>Cross-platform</li>
+								<li>Uses the latest patched runtime</li>
+								<li>Requires .NET to be installed on the host</li>
+								<li>.NET may change</li>
+							</ul>
+						</li>
+						<li><mark>Self-contained</mark>
+							<ul>
+								<li>Bundle .NET Framework and application together</li>
+								<li>Platform-dependent</li>
+								<li>Full control over .NET version</li>
+								<li>Larger deployments</li>
+								<li>Harder to update the .NET version</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/dotnet/core/deploying/">Application publishing - .NET |
+									Microsoft Docs</a></li>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 509</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Deploying on Windows/Linux</h2>
+					<ul>
+						<li>Internet Information Services (IIS)
+							<ul>
+								<li>Application pools</li>
+								<li><mark>In-process</mark> and <mark>out-of-process</mark> hosting</li>
+							</ul>
+						</li>
+						<li>Nginx
+							<ul>
+								<li>Add <code>ForwardedHeadersMiddleware</code>–remember to enable it by setting
+									<code>ASPNETCORE_FORWARDEDHEADERS_ENABLED</code> to <code>true</code></li>
+								<li>Use the correct <mark>syntax</mark> for environment variables</li>
+							</ul>
+						</li>
+						<li>Apache
+							<ul>
+								<li>Same as Nginx</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-nginx">Host ASP.NET Core
+									on Linux with Nginx | Microsoft Docs</a></li>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/linux-apache">Host ASP.NET Core
+									on Linux with Apache | Microsoft Docs</a></li>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer">Configure
+									ASP.NET Core to work with proxy servers and load balancers | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section id="bundling-and-minification">
+					<h2>Bundling and minification</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>The browser must request <mark>each</mark> file and <mark>wait</mark> for a response
+							<ul>
+								<li>This can take a lot of time!</li>
+								<li>Have a massive <mark>impact</mark> on the perceived <mark>speed</mark> of the application</li>
+							</ul>
+						</li>
+						<li>Bundling <mark>minimizes</mark> the number of requests
+							<ul>
+								<li>Combines <mark>multiple</mark> files into a <mark>single</mark> file</li>
+							</ul>
+						</li>
+						<li>Minification minimized the response <mark>size</mark>
+							<ul>
+								<li>Removes unnecessary characters from the code without altering functionality</li>
+							</ul>
+						</li>
+						<li>Most frontend frameworks has <mark>built-in</mark> minification and bundling in their toolchains</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/client-side/bundling-and-minification">Bundle
+									and minify static assets in ASP.NET Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Bundling and minification</h2>
+					<pre><code class="js" data-line-numbers="|4-11|13-24|26-30|33-51|54|" data-trim data-noescape><script type="text/template">
+							// examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/fibonacci.js
+							// https://medium.com/developers-writing/fibonacci-sequence-algorithm-in-javascript-b253dc7e320e
+
+							function memo(num, memo) {
+								memo = memo || {};
+							
+								if (memo[num]) return memo[num];
+								if (num <= 1) return 1;
+							
+								return memo[num] = memo(num - 1, memo) + memo(num - 2, memo);
+							}
+							
+							function loop(num){
+								var a = 1, b = 0, temp;
+							
+								while (num >= 0){
+									temp = a;
+									a = a + b;
+									b = temp;
+									num--;
+								}
+							
+								return b;
+							}
+							
+							function recursion(num) {
+								if (num <= 1) return 1;
+							
+								return recursion(num - 1) + recursion(num - 2);
+							}
+
+							// examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/site.js
+							function myFunc() {
+								// this function doesn't really do anything,
+								// it's just here so that we can show off minifying!
+								function innerFunctionToAddTwoNumbers(thefirstnumber, theSecondNumber) {
+									// i'm nested inside myFunc
+									return thefirstnumber + theSecondNumber;
+								}
+								var shouldAddNumbers = true;
+								var totalOfAllTheNumbers = 0;
+								if (shouldAddNumbers == true) {
+									for (var index = 0; i < 10; i++) {
+										totalOfAllTheNumbers = innerFunctionToAddTwoNumbers(
+											totalOfAllTheNumbers,
+											index
+										);
+									}
+								}
+								return totalOfAllTheNumbers;
+							}
+							
+							// Minified and bundled (examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/site.min.js)
+							function memo(n,t){return(t=t||{},t[n])?t[n]:n<=1?1:t[n]=t(n-1,t)+t(n-2,t)}function loop(n){for(var t=1,i=0,r;n>=0;)r=t,t=t+i,i=r,n--;return i}function recursion(n){return n<=1?1:recursion(n-1)+recursion(n-2)}function myFunc(){function r(n,t){return n+t}var n=0,t;if(1)for(t=0;i<10;i++)n=r(n,t);return n}
+						</script></code></pre>
+					<small>examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/fibonacci.js<br />examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/useless.js<br />examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/wwwroot/js/site.min.js</small>
+				</section>
+				<section>
+					<h2>Minification</h2>
+					<pre><code class="html" data-line-numbers="|7-10|11-14|" data-trim data-noescape><script type="text/template">
+							<!DOCTYPE html>
+							<html lang="en">
+							<head>
+									<meta charset="utf-8" />
+									<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+									<title>@ViewData["Title"] - bundling_and_minification</title>
+									<environment include="Development">
+											<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+											<link rel="stylesheet" href="~/css/site.css" />
+									</environment>
+									<environment exclude="Development">
+											<link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+											<link rel="stylesheet" href="~/css/site.min.css" asp-append-version="true" />
+									</environment>
+							</head>
+							<body>
+									<header>
+											<nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+													<div class="container">
+															<a class="navbar-brand" asp-area="" asp-page="/Index">bundling_and_minification</a>
+															<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+																			aria-expanded="false" aria-label="Toggle navigation">
+																	<span class="navbar-toggler-icon"></span>
+															</button>
+															<div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+																	<ul class="navbar-nav flex-grow-1">
+																			<li class="nav-item">
+																					<a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
+																			</li>
+																			<li class="nav-item">
+																					<a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
+																			</li>
+																	</ul>
+															</div>
+													</div>
+											</nav>
+									</header>
+									<div class="container">
+											<main role="main" class="pb-3">
+													@RenderBody()
+											</main>
+									</div>
+							
+									<footer class="border-top footer text-muted">
+											<div class="container">
+													&copy; 2022 - bundling_and_minification - <a asp-area="" asp-page="/Privacy">Privacy</a>
+											</div>
+									</footer>
+							
+									<environment include="Development">
+										&lt;script src="~/js/fibonacci.js" >&gt;&lt;/script&gt;
+										&lt;script src="~/js/useless.js">&gt;&lt;/script&gt;
+										&lt;script src="~/lib/jquery/dist/jquery.js"&gt;&lt;/script&gt;
+										&lt;script src="~/lib/bootstrap/dist/js/bootstrap.bundle.js&gt;&lt;/script&gt;
+									</environment>
+									<environment exclude="Development">
+											&lt;script src="~/lib/jquery/dist/jquery.min.js"&gt;&lt;/script&gt;
+											&lt;script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"&gt;&lt;/script&gt;
+											&lt;script src="~/js/site.min.js" asp-append-version="true"&gt;&lt;/script&gt;
+									</environment>
+							
+									@await RenderSectionAsync("Scripts", required: false)
+								</body>
+							</html>
+						</script></code></pre>
+						<small>examples/lesson-10-deployment-logging-and-tests/bundling-and-minification/Pages/Shared/_Layout.cshtml</small>
+				</section>
+				<section>
+					<h2>Bundling and Minification</h2>
+					<ul>
+					<li>ASP.NET Core does not provide <mark>native</mark> bundling and minification</li>
+						<li>NuGet packages
+							<ul>
+								<li>ASP.NET Core Web Optimizer</li>
+								<li>Bundler and Minifier</li>
+							</ul>
+						</li>
+						<li>Other tools like Gulp and Webpack provide workflow <mark>automation</mark></li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://github.com/ligershark/WebOptimizer">ligershark/WebOptimizer: A bundler and minifier for ASP.NET Core</a></li>
+							<li><a href="https://www.nuget.org/packages/BuildBundlerMinifier/">NuGet Gallery | BuildBundlerMinifier 3.2.449</a></li>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/client-side/bundling-and-minification">Bundle and minify static assets in ASP.NET Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section id="monitoring-and-logging">
+					<h2>Monitoring and logging</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>The process of <mark>recording</mark> events or actions in an app</li>
+						<li>Logging is added to applications for the following reasons
+							<ul>
+								<li><mark>Auditing</mark> and <mark>analytics</mark>—when did what happen?</li>
+								<li><mark>Errors</mark>—what went wrong?</li>
+								<li><mark>Non-errors</mark>—follow the breadcrumbs when an error occurs</li>
+							</ul>
+						</li>
+						<li>How much logging is enough?
+							<ul>
+								<li>Typically, there is a <mark>difference</mark> between development and production logging</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 539-541</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Logging abstractions</h2>
+					<ul>
+						<li>ASP.NET Core includes a <mark>generic</mark> logging interface
+							<ul>
+								<li><code>ILogger</code>—Interface used in controllers and page models</li>
+								<li><code>ILoggerProvider</code>—Used to create custom instances of <code>ILogger</code></li>
+								<li><code>ILoggerFactory</code>—The glue that bind loggers and providers together</li>
+							</ul>
+						</li>
+						<li>ASP.NET Core provides a range of <mark>built-in</mark> loggers
+							<ul>
+								<li>A range of <mark>third-party</mark> is offered</li>
+								<li>You can build your own custom loggers</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 543-544</li>
+							<a href="https://docs.microsoft.com/en-us/dotnet/core/extensions/custom-logging-provider">Implement a custom logging provider in .NET | Microsoft Docs</a>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Logging categories and levels</h2>
+					<ul>
+						<li>Log levels (verbosity)
+							<ul>
+								<li>Indicates the <mark>importance</mark> (seriousness) of the event</li>
+								<li>Used for <mark>filtering</mark> events during inspection</li>
+								<li>Defined by the <code>LogLevel</code> enum</li>
+							</ul>
+						</li>
+						<li>Categories (filtering)
+							<ul>
+								<li>Used for <mark>filtering</mark> event during inspection</li>
+								<li>Best practise is to use fully <mark>qualified</mark> class names
+									<ul>
+										<li>Inject <code>ILogger&lt;T&gt;</code> in methods should be enough most of the time</li>
+									</ul>
+								</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/logging/">Logging in .NET Core and
+									ASP.NET Core | Microsoft Docs</a></li>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 547-550</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Log levels</h2>
+					<img src="../../assets/log-levels.png" width="60%" alt="log-levels" />
+					<small>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 549</small>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), p. 549</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Formatting log messages</h2>
+					<ul>
+						<li>Use <mark>placeholders</mark> and in message strings
+							<ul>
+								<li><code>LogDebug("Loaded {dbCount} elements from {dbContext}", dbCount, dbContext)</code></li>
+								<li>Use must provide at least the as many parameters to the log message that there placeholders in the
+									message</li>
+								<li>Don't use string interpolation <s><code>$"Loaded {dbCount} elements from {dbContext}"</code></s>
+								</li>
+								<li>The <mark>order</mark> of the parameters is significant</li>
+							</ul>
+						</li>
+						<li>Structured or sematic logging
+							<ul>
+								<li>Attaches additional structures to log messages</li>
+							<li>Makes it easier <mark>searchable</mark> and filterable</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li></li>
+							<li></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Serilog</h2>
+					<ul>
+						<li>Serilog is a <mark>third-party</mark> logger</li>
+						<li>Writes messages to sinks
+							<ul>
+								<li>There are <mark>+100</mark> sinks available on NuGet</li>
+							</ul>
+						</li>
+						<li>Easy to add to existing ASP.NET Core projects
+							<ul>
+								<li>Add the <code>Serilog.AspNetCore</code> and sinks and start logging</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://github.com/serilog/serilog-aspnetcore">serilog/serilog-aspnetcore: Serilog
+									integration for ASP.NET Core</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section>
+				<section id="testing-applications">
+					<h2>Testing ASP.NET Core applications</h2>
+				</section>
+				<section>
+					<h2>Overview</h2>
+					<ul>
+						<li>Testing is <mark>generally</mark> considered good practice</li>
+						<li>Identify errors and verify changes to the code base</li>
+						<li>Different types of tests
+							<ul>
+								<li>Unit testing—test a component in <mark>isolation</mark></li>
+								<li>Integration testing—test a <mark>collection</mark> of components</li>
+								<li>User interface testing—interacts with <mark>browser</mark> (end-to-end)</li>
+							</ul>
+						</li>
+						<li>Can (should) be <mark>automated</mark> with Continuous Integration (CI)</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Testing with xUnit</h2>
+					<ul>
+						<li>xUnit is am open-source unit testing tool for .NET
+							<ul>
+								<li>Written by the authors of <mark>NUnit</mark></li>
+								<li>Used as testing tool for ASP.NET Core</li>
+							</ul>
+						</li>
+						<li>Use <mark>In-memory</mark> database to test <code>DbContext</code></li>
+						<li>Writing tests for xUnit
+							<ul>
+								<li>Tests are denoted by the <code>[Fact]</code> or <code>[Theory]</code>attribute</li>
+								<li>The method should be public with no parameters</li>
+								<li>The method should return <code>null</code></li>
+								<li>The method should reside in a public, non-static class</li>
+							</ul>
+						</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/ef/core/testing/">Overview of testing applications that use EF Core - EF Core | Microsoft Docs</a></li>
+							<li><a href="https://xunit.net/">Home | xUnit.net</a></li>
+							<li>ASP.NET Core in Action, 2nd edition (ISBN 9781617298301), pp. 719</li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Unit testing with xUnit (SUT)</h2>
+					<pre><code class="csharp" data-line-numbers="|1,12|2,7|3,5|4|6|2-7|9-11|10|" data-trim data-noescape><script type="text/template">
+							public class TemperatureConverter {
+								public decimal CelsiusToFahrenheit(decimal celcius) {
+									if(celcius < kelvinToCelsius(0)) {
+										throw new ArgumentOutOfRangeException(nameof(celcius));
+									}
+									return (celcius * 9/5) + 32; 
+								} 
+							
+								public decimal kelvinToCelsius(decimal kelvin) {
+									return kelvin - 273.15m;
+								}
+							}
+						</script></code></pre>
+					<small>examples/lesson-10-deployment-logging-and-tests/Testing/Testing/TemperatureConverter.cs</small>
+				</section>
+				<section>
+					<h2>Unit testing with xUnit</h2>
+					<pre><code class="csharp" data-line-numbers="|9-10,16|11-13|14|15|19,25|21|22,24|23|" data-trim data-noescape><script type="text/template">
+							using System;
+							using Xunit;
+							
+							namespace Testing.Tests;
+							
+							public class TemperatureConverterUnitTest
+							{
+									[Fact]
+									public void CelsiusToFahrenheit()
+									{
+											var converter = new TemperatureConverter();
+											decimal input = 0;
+											decimal expected = 32m;
+											var actual = converter.CelsiusToFahrenheit(input);
+											Assert.Equal(expected, actual);
+									}
+							
+									[Fact]
+									public void CelsiusToFahrenheitBelowAbsoluteZero() {
+											var converter = new TemperatureConverter();
+											decimal input = -273.16m;
+											var ex = Assert.Throws<ArgumentOutOfRangeException>(
+													() => converter.CelsiusToFahrenheit(input)
+											);
+									}
+							}
+						</script></code></pre>
+					<small>examples/lesson-10-deployment-logging-and-tests/Testing/Testing.Tests/TemperatureConverter.cs</small>
+				</section>
+				<section>
+					<h2>Integration test for API controllers</h2>
+					<ul>
+						<li>Ensures application components function at <mark>infrastructure</mark> level, which includes
+							<ul>
+								<li>Databases</li>
+								<li>File systems</li>
+								<li>Networks</li>
+								<li>Request-response pipelines</li>
+							</ul>
+						</li>
+						<li>Limit to the most <mark>important</mark> scenarios</li>
+						<li>Use the <code>Microsoft.AspNetCore.Mvc.Testing</code> NuGet package</li>
+					</ul>
+					<aside class="notes" aria-label="notes">
+						<h4>References</h4>
+						<ul>
+							<li><a href="https://docs.microsoft.com/en-us/aspnet/core/test/integration-tests">Integration tests in ASP.NET Core | Microsoft Docs</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section>
+					<h2>Integration test</h2>
+					<pre><code class="csharp" data-line-numbers="|11-15,24|16-17|19|20|21|22|23|" data-trim data-noescape><script type="text/template">
+						using System.Threading.Tasks;
+						using System.Net.Http.Json;
+						using System.Net;
+						using Microsoft.AspNetCore.Mvc.Testing;
+						using Xunit;
+						
+						namespace Testing.Tests;
+						
+						public class WeatherForecastControllerTests
+						{
+							[Theory]
+							[InlineData(0, 32)]
+							[InlineData(-273.15, -459.67)]
+							public async Task PostWeatherForecastSuccess(decimal input, decimal output)
+							{
+								var application = new WebApplicationFactory<Program>()
+									.WithWebHostBuilder(builder => { });
+						
+								var client = application.CreateClient();
+								var body = JsonContent.Create(new { value = input });
+								var response = await client.PostAsync("/weatherforecast", body);
+								response.EnsureSuccessStatusCode();
+								Assert.Equal(output.ToString(), await response.Content.ReadAsStringAsync());
+							}
+						
+							[Fact]
+							public async Task PostWeatherForecastBadRequest()
+							{
+								var input = -274;
+						
+								var application = new WebApplicationFactory<Program>()
+									.WithWebHostBuilder(builder => { });
+						
+								var client = application.CreateClient();
+								var body = JsonContent.Create(new { value = input });
+								var response = await client.PostAsync("/weatherforecast", body);
+								
+								Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+							}
+					</script></code></pre>
+					<small>examples/lesson-10-deployment-logging-and-tests/Testing/Testing.Tests/WeatherForecastController.cs</small>
+				</section>
+			</section>
+			<section id="wrap-up">
+				<h2>wrap-up</h2>
+				<ul>
+					<li>Publishing and deploying applications
+						<ul>
+							<li>The .NET hosting model</li>
+							<li>Optimizing client-side assets</li>
+						</ul>
+					</li>
+					<li>Logging and monitoring
+						<ul>
+							<li>Abstractions and levels</li>
+							<li>Serilog</li>
+						</ul>
+					</li>
+					<li>Testing ASP.NET Core applications
+						<ul>
+							<li>Unit testing with xUnit</li>
+							<li>Integration tests</li>
+						</ul>
+					</li>
+				</ul>
+			</section>
+		</div>
+	</div>
+
+	<script src="../../dist/reveal.js"></script>
+	<script src="../../plugin/notes/notes.js"></script>
+	<script src="../../plugin/markdown/markdown.js"></script>
+	<script src="../../plugin/highlight/highlight.js"></script>
+	<script src="../../js/asciinema-player.js"></script>
+
+	<script>
+		// More info about initialization & config:
+		// - https://revealjs.com/initialization/
+		// - https://revealjs.com/config/
+		Reveal.initialize({
+			hash: true,
+			slideNumber: true,
+			pdfSeparateFragments: false,
+			// Learn about plugins: https://revealjs.com/plugins/
+			plugins: [RevealMarkdown, RevealHighlight, RevealNotes]
+		});
+	</script>
+</body>
+
+</html>

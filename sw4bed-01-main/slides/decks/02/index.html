@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Lesson 02</title>
+
+		<link rel="stylesheet" href="../../dist/reset.css">
+		<link rel="stylesheet" href="../../dist/reveal.css">
+		<link rel="stylesheet" href="../../dist/theme/black.css">
+		<link rel="stylesheet" type="text/css" href="../../css/asciinema-player.css" />
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="../../plugin/highlight/github-dark.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section id="introduction">
+					<h1>Docker</h1>
+					<h3>Lesson 02</h3>
+					<h4>SW4BED-01</h4>
+				</section>
+				<section id="agenda">
+					<h2>Agenda</h2>
+					<ul>
+						<li>What is Docker?</li>
+						<li>Creating images</li>
+						<li>Build and deploy containers</li>
+						<li>Persisting data</li>
+						<li>Multi-container applications</li>
+					</ul>
+				</section>
+				<section id="what-is-docker">
+					<section>
+						<h1>What is Docker?</h1>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>Docker is an open <mark>platform</mark> for developing, shipping and running applications</li>
+							<li>Docker <mark>separates</mark> applications from <mark>infrastructure</mark></li>
+							<li>Docker let you <mark>manage</mark> your infrastructure in the same way you manage your applications</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li>Docker overview | Docker Documentation</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Docker architecture</h2>
+						<ul>
+							<li>Docker <mark>daemon</mark>
+								<ul>
+									<li>Listens for Docker API requests</li>
+									<li>Manages Docker objects</li>
+								</ul>
+							</li>
+							<li>Docker <mark>client</mark>
+								<ul>
+									<li>The primary way users interact with Docker</li>
+								</ul>
+							</li>
+							<li>Docker <mark>registries</mark>
+								<ul>
+									<li>Stores Docker images</li>
+									<li>Docker Hub is a public registry (used by default). You can run a private registry</li>
+									<li><code>docker pull/run</code> fetches required images, and <code>docker push</code> publishes images to registries</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/get-started/overview/">Docker overview | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Docker architecture</h2>
+						<img src="../../assets/docker-architecture.svg" alt="docker-architecture" width="50%" />
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/get-started/overview/#docker-architecture">Docker overview | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Docker images</h2>
+						<ul>
+							<li>Images are <mark>read-only</mark> templates with instructions for creating containers
+								<ul>
+									<li>Images are typically based on other images, with some customization</li>
+								</ul>
+							</li>
+							<li>To build an image, you create a <mark>Dockerfile</mark>
+								<ul>
+									<li>A simple syntax defines the steps needed to produce an image and run it</li>
+									<li>Each instruction create a layer in the image</li>
+								</ul>
+							</li>
+							<li><mark>Layers</mark> are what makes Docker so lightweight, small, and fast when compared with other virtualization technologies
+								<ul>
+									<li>When rebuilding an image, only those layers which have changed are rebuilt</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Docker containers</h2>
+						<ul>
+							<li>A container is a runnable <mark>instance</mark> of an image</li>
+							<li>A container is relatively well <mark>isolated</mark> from other containers and its host machine</li>
+							<li>A container is defined by its image as well as any <mark>configuration</mark> you provide to it when you create or start it
+								<ul>
+									<li>When a container is removed, any changes to its state that are not stored in persistent storage disappear</li>
+								</ul>
+							</li>	
+						</ul>
+					</section>
+					<section>
+						<h2>Docker deployment</h2>
+						<img src="../../assets/docker-deployment.png" alt="docker-deployment" />
+						<small>Containers and VMs Together - Docker Blog</small>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://www.docker.com/blog/containers-and-vms-together/">Containers and VMs Together - Docker Blog</a></li>
+							</ul>
+						</aside>
+					</section>
+				</section>
+				<section id="creating-images">
+					<section>
+						<h1>Creating images</h1>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>Dockerfiles</li>
+							<li>Building images
+								<ul>
+									<li>Using <code>docker build</code></li>
+									<li>Multi-stage builds</li>
+								</ul>
+							</li>
+							<li>Publishing images to registries</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Dockerfiles</h2>
+						<pre><code class="dockerfile" data-line-numbers="|2|3|6|7|8|11|12|13|2,16|16|17|18|19|" data-trim data-noescape><script type="text/template">
+							# https://hub.docker.com/_/microsoft-dotnet
+							FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+							WORKDIR /source
+							
+							# copy csproj and restore as distinct layers
+							COPY *.sln .
+							COPY api/*.csproj ./api/
+							RUN dotnet restore
+							
+							# copy everything else and build app
+							COPY api/. ./api/
+							WORKDIR /source/api
+							RUN dotnet publish -c release -o /app
+							
+							# final stage/image
+							FROM mcr.microsoft.com/dotnet/aspnet:7.0
+							WORKDIR /app
+							COPY --from=build /app ./
+							ENTRYPOINT ["dotnet", "api.dll"]
+						</script>
+						</code></pre>
+						<small>examples/lesson-02-docker/hello-docker/Dockerfile</small>
+					</section>
+					<section>
+						<h2>.NET Core docker images</h2>
+						<ul>
+							<li>Challenging to keep image size small</li>
+							<li>Multi-stage build
+								<ul>
+									<li><mark>Build</mark> application in container optimized for <mark>development</mark>, debugging, and testing</li>
+									<li><mark>Run</mark> application in optimized from <mark>production</mark></li>
+								</ul>
+							</li>
+							<li>Restore in distinct layer to use caching features
+								<ul>
+									<li>If the project file(s) have not changed, use <mark>cached</mark> layers</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.microsoft.com/en-us/aspnet/core/host-and-deploy/docker/building-net-docker-images">Docker images for ASP.NET Core | Microsoft Docs</a></li>
+								<li><a href="https://docs.docker.com/develop/develop-images/dockerfile_best-practices/">Best practices for writing Dockerfiles | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/develop/develop-images/multistage-build/">Use multi-stage builds | Docker Documentation</a></li>
+							</ul>
+						</section>
+					<section>
+						<h2>Docker build</h2>
+						<ul>
+							<li>The <code>docker build</code> command builds an image from a Dockerfile and a context
+								<ul>
+									<li>A build's context is a set of files located in a <code>PATH</code> or <code>URL</code></li>
+									<li>When the <code>URL</code> points to a Git repository, that acts as the context </li>
+								</ul>
+							</li>
+							<li>Options
+								<ul>
+									<li><code>--pull</code>—Always attempt to pull a newer version of the image</li>
+									<li><code>--file, -f</code>—Name of the Dockerfile (Default is 'PATH/Dockerfile')</li>
+									<li><code>--tag , -t</code>—Name and optionally a tag in the 'name:tag' format</li>
+								</ul>
+							</li>
+							<li>Use a <code>.dockerignore</code> file to exclude files from being sent to the Docker daemon</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/build/">docker build | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Publishing images</h2>
+						<ul>
+							<li>Use <code>docker push</code> to upload and publish images in registries
+								<ul> 
+									<li>Default registry: <a href="https://hub.docker.com/">Docker Hub</a></li>
+								</ul>
+							</li>
+							<li>Be sure to tag the image as <code>&lt;USERNAME&gt;/&lt;IMAGE_TAG&gt;</code></li>
+							<aside class="notes" aria-label="notes">
+								<h4>References</h4>
+								<ul>
+									<li><a href="https://docs.docker.com/docker-hub/">Docker Hub Quickstart | Docker Documentation</a></li>
+								</ul>
+							</aside>
+						</ul>
+					</section>
+				</section>
+				<section id="build-and-deploy-containers">
+					<section>
+						<h1>Creating and running containers</h1>
+					</section>
+					<section>
+						<h2>Containers</h2>
+						<ul>
+							<li>A container a runnable <mark>instance</mark> of an <mark>image</mark></li>
+							<li>Containers are <mark>ephemeral</mark>
+								<ul>	
+									<li>They can be stopped, destroyed, rebuilt and replaced with minimum set up and configuration</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2><code>docker run</code></h2>
+						<ul>
+							<li><code>docker run [OPTIONS] IMAGE [COMMAND] [ARG...]</code></li>
+							<li>Options
+								<ul>
+									<li><code>--detach, -d</code>—Run container in background and print container ID</li>
+									<li><code>--rm</code>—Automatically remove the container when it exits</li>
+									<li><code>--tty, -t</code>—Allocate a pseudo-TTY</li>
+									<li><code>--interactive, -i</code>—Keep STDIN open even if not attached</li>
+									<li><code>--volume, -v</code>—Bind mount a volume</li>
+									<li><code>--name</code>—Assign a name to the container</li>
+									<li><code>--publish, -p</code>—Publish a container's port(s) to the host</li>
+								</ul>
+							</li>
+							<li><code>docker run --rm -p 5000:80 my_app</code>
+								<ul>
+									<li>Run image named <code>my_app</code> and expose port 80 in the container on 5000 on the host, and remove the container when it stops</li>
+								</ul>
+							</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>Reference</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/run/">docker run | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Other useful <code>docker</code> commands</h2>
+						<ul>
+							<li><code>docker port</code>—List port mappings or a specific mapping for the container</li>
+							<li><code>docker container prune</code>—Remove all stopped containers</li>
+							<li><code>docker ps</code>—List containers</li>
+							<li><code>docker rmi</code>—Remove one or more images</li>
+							<li><code>docker rm</code>—Remove one or more containers</li>
+							<li><code>docker image</code>List images</li>
+						</ul>
+						<ul>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/port/">docker port | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/container_prune/">docker container prune | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/ps/">docker ps | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/rmi/">docker rmi | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/rm/">docker | Docker Documentation</a></li>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/images/">docker images | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+				</section>
+				<section id="persisting-data">
+					<section>
+						<h1>Persisting data</h1>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<ul>
+							<li>All data is written to the container's file system by default
+								<ul>
+									<li>Data does not persist when a container no longer exists</li>
+								</ul>
+							</li>
+							<li>Docker has two options for containers to store files on the host machine filesystem: <mark>Volumes</mark> and <mark>Bind mounts</mark></li>
+							<li>Docker also supports containers storing files in-memory on the host machine with <mark><code style="background: transparent; color: black; padding: 0;">tmpfs</code> mounts</mark></li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/storage/">Manage data in Docker | Docker Documentation</a></li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Storage options</h2>
+						<ul>
+							<li>Volumes
+								<ul>
+									<li>Stored in a part of the host filesystem <mark>managed</mark> by Docker</li>
+									<li>Should <mark>only</mark> be modified by Docker processes</li>
+								</ul>
+							</li>
+							<li>Bind mounts 
+								<ul>
+									<li>Stored <mark>anywhere</mark> on the host filesystem</li>
+									<li>May be modified by <mark>any</mark> process (Docker and/or Non-Docker)</li>
+								</ul>
+							</li>
+							<li>In-memory file systems
+								<ul>
+									<li>Stored in the host system's <mark>memory</mark></li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Volumes</h2>
+						<ul>
+							<li>Persist data on host filesystem managed by Docker</li>
+							<li>Use cases
+								<ul>
+									<li>Sharing data across multiple containers</li>
+									<li>Back-up, restore and migrate data between host machines</li>
+								</ul>
+							</li>
+							<li>Use <code>docker volume</code> to create and manage volumes</li>
+							<li>Use the <code>-v|--volume</code> flag to specify volume mount</li>
+							<li>Can be managed directly with Docker CLI</li>
+						</ul>
+						<aside class="notes" aria-label="notes">
+							<h4>References</h4>
+							<ul>
+								<li><a href="https://docs.docker.com/engine/reference/commandline/volume_create/"></a>docker volume create | Docker Documentation</li>
+							</ul>
+						</aside>
+					</section>
+					<section>
+						<h2>Bind mounts</h2>
+						<ul>
+							<li>Mounts directory/file on host machine in a container</li>
+							<li>Use cases
+								<ul>
+									<li>Sharing configuration files from the host machine to containers</li>
+									<li>Sharing source code or build artifacts between and development environment on the host machine and a container</li>
+								</ul>
+							</li>
+							<li>Use the <code>-v|--volume</code> flag to specify mount points</li>
+							<li>Cannot be managed with Docker CLI</li>
+						</ul>
+					</section>
+				</section>
+				<section id="multi-container-applications">
+					<section>
+						<h1>Multi-container applications</h1>
+					</section>
+					<section>
+						<h2>Docker Compose</h2>
+						<ul>
+							<li>Compose is a tool for <mark>defining</mark> and <mark>running</mark> <mark>multi-container</mark> applications</li>
+							<li>Compose files are defined using YAML</li>
+							<li>The three step process:
+								<ul>
+									<li>Define application environment with a Dockerfile</li>
+									<li>Define the services that make up the application in docker-compose.yml</li>
+									<li>Run <code>docker compose up</code> to start the entire application</li>
+								</ul>
+							</li>
+							<li>Concise environment description</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Compose file</h2>	
+						<pre><code class="yaml" data-line-numbers="|1|3|4,11|5-6|7-8|9-10|11|12|13|14-15|16-18|19-20|21-23|" data-trim data-noescape><script type="text/template">
+							version: '3.4'
+
+							services:
+								api:
+									build:
+										dockerfile: Dockerfile
+									ports:
+										- "5000:80"
+									depends_on: 
+										- db
+								db:
+									image: mcr.microsoft.com/mssql/server
+									user: root
+									volumes:
+										- hello-compose:/var/opt/mssql/data
+									environment:
+										SA_PASSWORD: "suchSecureVeryWordSoPassW0w!"
+										ACCEPT_EULA: "Y"
+									ports:
+									- "1433:1433"
+							volumes:
+								hello-compose:
+									name: hello-compose-db
+							</script>
+						</code></pre>
+						<small>examples/lesson-02-docker/hello-compose/docker-compose.yaml</small>
+					</section>
+					<section>
+						<h2>Common use cases</h2>
+						<ul>
+							<li>Development environments
+								<ul>
+									<li><mark>Concise</mark> environment description</li>
+									<li><mark>Isolated</mark> environment</li>
+								</ul>
+							</li>
+							<li>Automated testing environments
+								<ul>
+									<li>Set up environment for <mark>automated</mark> test suites</li>
+									<li>Create and destroy isolated testing environments</li>
+								</ul>
+							</li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<h2>Orchestration</h2>
+					<ul>
+						<li>Infrastructure as code</li>
+						<li><mark>Scaling</mark>, <mark>monitoring</mark> and <mark>configuration</mark> of applications in clusters and/or clouds</li>
+						<li>Not in the scope for SW4BED-01
+							<ul>
+								<li>The department offers Web Architecutre og Orchestration Practice (SWWAO-01)</li>
+							</ul>
+						</li>
+					</ul>
+				</section>
+				<section>
+					<section>
+						<h2>Wrap-up</h2>
+						<ul>
+							<li>What is Docker?</li>
+							<li>Build and deploy containers</li>
+							<li>Creating images</li>
+							<li>Persisting data</li>
+							<li>Multi-container applications</li>
+						</ul>
+					</section>
+					<section data-background-image="../../assets/dumpster.gif">
+						<h1>Remember</h1>
+						<h4>A container is never better</h4>
+						<h4>Than the </h4>
+						<h2>Software</h2>
+						<h4>it is</h4>
+						<h2>containing</h2>
+					</section>
+				</section>
+			</div>
+		</div>
+
+		<script src="../../dist/reveal.js"></script>
+		<script src="../../plugin/notes/notes.js"></script>
+		<script src="../../plugin/markdown/markdown.js"></script>
+		<script src="../../plugin/highlight/highlight.js"></script>
+		<script src="../../js/asciinema-player.js"></script>
+
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+				slideNumber: true,
+				pdfSeparateFragments: false,
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "Colors": {
+    "Primary": "lime",
+    "PrimaryLight": "#6ec6ff",
+    "PrimaryDark": "#0069c0",
+    "Secondary": "tomato",
+    "SecondaryLight": "#ffc947",
+    "SecondaryDark": "#c66900"
+  },
+  "Fonts": {
+    "Display": {
+      "Name": "Display",
+      "Size": 48,
+      "Color": "skyblue"
+    },
+    "Body": {
+      "Name": "Body",
+      "Size": 12,
+      "Color": "tomato"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "Colors": {
+    "Primary": "#009688",
+    "PrimaryLight": "#52c7b8",
+    "PrimaryDark": "#00675b",
+    "Secondary": "#d81b60",
+    "SecondaryLight": "#ff5c8d",
+    "SecondaryDark": "#a00037"
+  },
+  "Fonts": {
+    "Display": {
+      "Name": "Display",
+      "Size": 48,
+      "Color": "skyblue"
+    },
+    "Body": {
+      "Name": "Body",
+      "Size": 24,
+      "Color": "bleachedalmond"
+    }
+  }
+}

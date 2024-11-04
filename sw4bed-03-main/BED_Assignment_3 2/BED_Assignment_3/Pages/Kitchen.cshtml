@@ -1,0 +1,18 @@
+﻿@page
+@model BED_Assignment_3.Pages.KitchenModel
+@{
+	ViewData["Title"] = "Kitchen";
+}
+
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/kitchen.js"></script>
+
+<p>Expected guests: @Model.TotalExpectedGuests</p>
+<p>Adults: @Model.TotalAdultsExpected</p>
+<p>Children: @Model.TotalChildrenExpected</p>
+
+<p>Checked-in adults: @Model.TotalCheckedInAdults</p>
+<p>Checked-in children: @Model.TotalCheckedInChildren</p>
+
+<p>Remaining adults: @Model.RemainingAdults</p>
+<p>Remaining children: @Model.RemainingChildren</p>

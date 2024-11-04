@@ -1,0 +1,22 @@
+﻿@page
+@model MTGCollection.Pages.Decks.IndexModel
+
+@{
+}
+
+<form method="post">
+  <div class="d-flex">
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" placeholder="Name" asp-for="Input.Name" />
+    </div>
+  </div>
+  <div class="input-group mb-3">
+    <button type="submit"class="btn btn-primary">Create</button>
+  </div>
+</form>
+<ul>
+  @foreach (var deck in Model.Decks)
+  {
+    <li><a href="/Decks/Details?id=@deck.Id">@deck.Name</a></li>
+  }
+</ul>

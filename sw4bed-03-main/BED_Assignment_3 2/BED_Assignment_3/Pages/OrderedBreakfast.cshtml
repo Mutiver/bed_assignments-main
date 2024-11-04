@@ -1,0 +1,32 @@
+﻿@page
+@model BED_Assignment_3.Pages.OrderedBreakfastModel
+@{
+}
+
+<div class="border border-5 rounded d-flex justify-content-center">
+	
+	<div class="m-4 flex-column">
+		<form method="Post">
+			<h5>Date:</h5>
+			<input asp-for="Input.Date"/>
+			
+			
+			<h5>Adults:</h5>
+			<input type="number" asp-for="Input.Adults"/>
+			
+			<h5>Children:</h5>
+			<input type="number" asp-for="Input.Children"/>
+			
+			<button id="resSubmit" type="submit", class="w-100 btn btn-lg btn-outline-primary mt-4">Save</button>
+		</form>
+		
+		<div class="mt-4">
+			<form method="Post" asp-page-handler="Redirect">
+				<button type="submit" class="w-100 btn btn-lg btn-outline-primary">Show Breakfast history</button>
+			</form>
+		</div>
+	</div>
+</div>
+
+
+

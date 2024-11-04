@@ -1,0 +1,23 @@
+﻿@page
+@model BED_Assignment_3.Pages.RestaurantModel
+@{
+	ViewData["Title"] = "Resturant";
+}
+
+<div id="res_div">
+	<form method="Post">
+		<label for="Room">Room: </label>
+		<input type="number" asp-for="Input.RoomNr" />
+		<br />
+
+		<label for="Adults eating">Adults eating: </label>
+		<input type="number" asp-for="Input.Adults" />
+		<br />
+
+		<label for="Children eating">Children eating: </label>
+		<input type="number" asp-for="Input.Children" />
+		<br />
+
+		<button type="submit" id="reservation_submit">Submit</button>
+	</form>
+</div>

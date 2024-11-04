@@ -1,0 +1,31 @@
+@page
+@model NewExpensesModel
+@{
+    ViewData["Title"] = "NewExpenses";
+}
+
+<script src="~/lib/microsoft/signalr/dist/browser/signalr.js"></script>
+<script src="~/js/NewExpenses.js"></script>
+
+<style>
+    #expenseContainer {
+        border-width: 10px;
+        border-radius: 69px;
+        border-color: hotpink;
+        background-color: #6c00e8;
+        color: springgreen;
+        width: 800px;
+        height: 250px;
+        overflow-y: auto;
+        text-align: left;
+    }
+</style>
+
+<div class="text-center">
+    <h1 class="display-4">New expenses:</h1>
+    <hr />
+    <div class="container" id="expenseContainer">
+        <ul id="expensesList"></ul>
+    </div>
+
+</div>

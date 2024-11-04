@@ -1,0 +1,9 @@
+﻿@page
+@model BED_Assignment_3.Pages.ReceptionModel
+@{
+	ViewData["Title"] = "Reception";
+}
+
+<button onclick="window.location.href='@Url.Page("OrderedBreakfast")'" class="button">Ordered Breakfast</button>
+<button onclick="window.location.href='@Url.Page("ListOfPeopleAteBreakfast")'" class="button">Breakfast History</button>
+
